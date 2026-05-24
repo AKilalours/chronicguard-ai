@@ -85,7 +85,7 @@ with st.sidebar:
     st.markdown("**Safety constraint**")
     st.markdown("`urgent_recall ≥ 0.92` — hard requirement, not a trade-off.")
     st.divider()
-    page = st.radio("View", ["Live Demo", "Batch Evaluation", "System Info"])
+    page = st.radio("View", ["Live Demo", "Batch Evaluation", "Outcome Simulation", "Risk Timeline", "RAGAS Eval", "System Info"])
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -249,6 +249,140 @@ elif page == "Batch Evaluation":
 
             with st.expander("Full JSON report"):
                 st.json(report.to_dict())
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+elif page == "Outcome Simulation":
+    st.subheader("Patient Outcome Simulation")
+    st.markdown("Simulates the operational impact of AI-assisted triage vs manual triage across 200 synthetic patient messages.")
+
+    import json
+    from pathlib import Path
+
+    sim_path = Path("results/outcome_simulation.json")
+    if not sim_path.exists():
+        st.warning("Run `python src/outcome_simulation.py` first.")
+    else:
+        with open(sim_path) as f:
+            d = json.load(f)
+
+        rt = d["response_time"]
+        sf = d["safety"]
+        cg = d["care_gaps"]
+        ef = d["efficiency"]
+
+        st.subheader("Response Time")
+        c1,c2,c3,c4 = st.columns(4)
+        c1.metric("Manual median", f"{rt['manual_median_hours']:.1f}h")
+        c2.metric("AI median", f"{rt['ai_median_hours']:.2f}h", delta=f"-{rt['improvement_pct']:.0f}%")
+        c3.metric("Urgent (manual)", f"{rt['manual_urgent_median_hours']:.1f}h")
+        c4.metric("Urgent (AI)", f"{rt['ai_urgent_median_hours']*60:.0f} min", delta=f"-{rt['urgent_improvement_pct']:.0f}%")
+
+        st.subheader("Patient Safety")
+        c1,c2,c3 = st.columns(3)
+        c1.metric("Missed urgent (manual)", sf["manual_missed_urgent"])
+        c2.metric("Missed urgent (AI)", sf["ai_missed_urgent"])
+        c3.metric("High-risk cases protected", sf["missed_urgent_reduction"])
+
+        st.subheader("Care Gap Closure")
+        c1,c2,c3 = st.columns(3)
+        c1.metric("Manual closure rate", f"{cg['manual_closure_rate']*100:.0f}%")
+        c2.metric("AI closure rate", f"{cg['ai_closure_rate']*100:.0f}%", delta=f"+{cg['improvement_pct']:.0f}%")
+        c3.metric("Additional gaps closed", cg["additional_gaps_closed"])
+
+        st.subheader("Care Manager Capacity")
+        c1,c2,c3 = st.columns(3)
+        c1.metric("Manual (msgs/day)", ef["manual_cm_capacity_per_day"])
+        c2.metric("AI-assisted (msgs/day)", ef["ai_cm_capacity_per_day"], delta=f"+{ef['capacity_increase_pct']:.0f}%")
+        c3.metric("Capacity increase", f"+{ef['capacity_increase_pct']:.0f}%")
+
+        st.info("Simulation based on published CCM literature benchmarks. All numbers are from synthetic data — not real patient records.")
+
+        with st.expander("Full JSON report"):
+            st.json(d)
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+elif page == "Risk Timeline":
+    st.subheader("Patient Risk Timeline")
+    st.markdown("Tracks simulated patient risk scores over time. Detects deterioration trends and recommends proactive outreach.")
+
+    import json
+    from pathlib import Path
+
+    tl_path = Path("results/risk_timelines.json")
+    if not tl_path.exists():
+        st.warning("Run `python src/risk_timeline.py` first.")
+    else:
+        with open(tl_path) as f:
+            d = json.load(f)
+
+        st.metric("Patients monitored", d["n_patients"])
+        st.metric("Proactive outreach needed", d["proactive_outreach_needed"])
+        st.divider()
+
+        RISK_COLORS_TL = {"low": "🟢", "medium": "🔵", "high": "🟠", "urgent": "🔴"}
+
+        for tl in d["timelines"]:
+            trend_icon = "📈" if tl["trend"] == "deteriorating" else "📉" if tl["trend"] == "improving" else "➡️"
+            outreach = "⚠️ PROACTIVE OUTREACH RECOMMENDED" if tl["proactive_outreach_recommended"] else "✅ Stable"
+            with st.expander(f"{trend_icon} {tl['name']} — {tl['condition']} | {outreach}"):
+                c1,c2,c3,c4 = st.columns(4)
+                c1.metric("Current risk", tl["current_risk"].title())
+                c2.metric("Peak risk", tl["peak_risk"].title())
+                c3.metric("Trend", tl["trend"].title())
+                c4.metric("Slope", f"{tl['trend_slope']:+.3f}/day")
+
+                st.markdown("**Message history:**")
+                for pt in tl["points"]:
+                    icon = RISK_COLORS_TL.get(pt["risk_level"], "⚪")
+                    review = " 👤" if pt["requires_review"] else ""
+                    st.markdown(f"Day {pt['days_offset']:>2} {icon} `{pt['risk_level']:>6}` — {pt['message']}{review}")
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+elif page == "RAGAS Eval":
+    st.subheader("RAGAS Evaluation — LLM Hallucination Detection")
+    st.markdown("Evaluates LLM response quality: faithfulness (hallucination detection) and answer relevance.")
+
+    import json
+    from pathlib import Path
+
+    ragas_path = Path("results/ragas_evaluation.json")
+    if not ragas_path.exists():
+        st.warning("Run `python src/ragas_evaluator.py` first.")
+    else:
+        with open(ragas_path) as f:
+            d = json.load(f)
+
+        c1,c2,c3,c4,c5 = st.columns(5)
+        c1.metric("Avg faithfulness", f"{d['avg_faithfulness']:.3f}")
+        c2.metric("Avg relevance", f"{d['avg_answer_relevance']:.3f}")
+        c3.metric("Context precision", f"{d['avg_context_precision']:.3f}")
+        c4.metric("Context recall", f"{d['avg_context_recall']:.3f}")
+        c5.metric("Hallucination rate", f"{d['hallucination_rate']:.0%}",
+                  delta="Safe" if d["hallucination_rate"] == 0 else "Review needed",
+                  delta_color="normal" if d["hallucination_rate"] == 0 else "inverse")
+
+        if d["hallucination_rate"] == 0:
+            st.success("No hallucinations detected — all LLM responses are grounded in retrieved care protocols.")
+        else:
+            st.warning(f"{d['n_hallucinations']} response(s) flagged for potential hallucination.")
+
+        st.divider()
+        st.markdown("**Individual case results:**")
+        for result in d.get("individual_results", []):
+            scores = result.get("scores", {})
+            faith = scores.get("faithfulness", 0)
+            status = "✅ Grounded" if not result.get("hallucination_detected") else "⚠️ Review"
+            with st.expander(f"{status} — {result['question'][:70]}"):
+                c1,c2,c3 = st.columns(3)
+                c1.metric("Faithfulness", f"{faith:.3f}")
+                c2.metric("Answer relevance", f"{scores.get('answer_relevance', 0):.3f}")
+                c3.metric("Overall", f"{scores.get('overall', 0):.3f}")
+                st.markdown(f"**Draft answer:** {result.get('answer', '')}")
+
+        st.info(f"Evaluation method: {d.get('method', 'heuristic')} | Model: GPT-4o-mini")
 
 
 # ════════════════════════════════════════════════════════════════════════════════
