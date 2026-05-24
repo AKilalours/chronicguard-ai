@@ -189,15 +189,27 @@ with col_clear:
         st.session_state.last_triage = None
         st.rerun()
 
-# ── AUTO-TRIAGE VOICE COMPONENT ───────────────────────────────────────────────
+# ── VOICE INPUT ────────────────────────────────────────────────────────────────
 st.markdown("### 🎤 Voice Input — Auto Triage")
-st.caption("Click Start → speak → click Stop. Transcript appears below — then click **Send Voice**.")
+st.caption("Speak → transcript auto-fills → auto-triages. No copy-paste needed.")
 
 if "voice_text" not in st.session_state:
     st.session_state.voice_text = ""
+if "voice_auto_send" not in st.session_state:
+    st.session_state.voice_auto_send = False
 
-auto_voice = components.html(f"""
-<div id="root" style="font-family:Inter,sans-serif;padding:4px 0">
+# Check query params for voice transcript (set by JS)
+qp = st.query_params
+if "vt" in qp and qp["vt"].strip():
+    incoming = qp["vt"].strip()
+    if incoming != st.session_state.get("last_voice_qp", ""):
+        st.session_state.voice_text = incoming
+        st.session_state.voice_auto_send = True
+        st.session_state.last_voice_qp = incoming
+        st.query_params.clear()
+
+components.html(f"""
+<div style="font-family:Inter,sans-serif;padding:2px 0">
   <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
     <button id="vBtn" onclick="toggleRec()"
       style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;border:none;
@@ -207,27 +219,25 @@ auto_voice = components.html(f"""
     </button>
     <div id="wave" style="display:none;align-items:center;gap:3px">
       <div style="width:3px;height:6px;background:#a78bfa;border-radius:2px;animation:wv 0.5s ease infinite alternate"></div>
-      <div style="width:3px;height:12px;background:#a78bfa;border-radius:2px;animation:wv 0.5s 0.1s ease infinite alternate"></div>
-      <div style="width:3px;height:20px;background:#a78bfa;border-radius:2px;animation:wv 0.5s 0.2s ease infinite alternate"></div>
-      <div style="width:3px;height:12px;background:#a78bfa;border-radius:2px;animation:wv 0.5s 0.3s ease infinite alternate"></div>
+      <div style="width:3px;height:14px;background:#a78bfa;border-radius:2px;animation:wv 0.5s 0.1s ease infinite alternate"></div>
+      <div style="width:3px;height:22px;background:#a78bfa;border-radius:2px;animation:wv 0.5s 0.2s ease infinite alternate"></div>
+      <div style="width:3px;height:14px;background:#a78bfa;border-radius:2px;animation:wv 0.5s 0.3s ease infinite alternate"></div>
       <div style="width:3px;height:6px;background:#a78bfa;border-radius:2px;animation:wv 0.5s 0.4s ease infinite alternate"></div>
-      <span style="color:#a78bfa;font-size:12px;margin-left:4px">Listening...</span>
+      <span style="color:#a78bfa;font-size:12px;margin-left:6px">Listening...</span>
     </div>
     <span id="st" style="font-size:12px;color:#94a3b8">Use Chrome · click to begin</span>
   </div>
   <div id="box" style="background:#1e1b4b;border:1px solid #4338ca;border-radius:10px;
-    padding:10px 14px;min-height:40px;font-size:13px;color:#c4b5fd;
-    margin-bottom:4px;line-height:1.5">
-    <span style="color:#6366f1;opacity:0.5">Spoken words appear here...</span>
+    padding:10px 14px;min-height:40px;font-size:13px;color:#c4b5fd;line-height:1.5">
+    <span style="opacity:0.4">Spoken words appear here automatically...</span>
   </div>
-  <span style="font-size:11px;color:#64748b">Stops recording → automatically triages</span>
 </div>
-<style>@keyframes wv{{0%{{transform:scaleY(0.3)}}100%{{transform:scaleY(1.5)}}}}</style>
+<style>@keyframes wv{{0%{{transform:scaleY(0.3)}}100%{{transform:scaleY(1.6)}}}}</style>
 <script>
 let rec=null,going=false,final_t='';
 function toggleRec(){{
   if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){{
-    document.getElementById('st').textContent='Voice needs Chrome browser';return;
+    document.getElementById('st').textContent='Use Chrome for voice input';return;
   }}
   going?rec.stop():startRec();
 }}
@@ -236,10 +246,10 @@ function startRec(){{
   rec=new SR();rec.continuous=true;rec.interimResults=true;rec.lang='en-US';
   rec.onstart=()=>{{
     going=true;final_t='';
-    document.getElementById('vBtn').innerHTML='⏹ Stop';
+    document.getElementById('vBtn').innerHTML='⏹ Stop Recording';
     document.getElementById('vBtn').style.background='linear-gradient(135deg,#dc2626,#b91c1c)';
     document.getElementById('wave').style.display='flex';
-    document.getElementById('st').textContent='';
+    document.getElementById('st').textContent='Listening...';
     document.getElementById('box').innerHTML='<span style="color:#a78bfa">Listening...</span>';
   }};
   rec.onresult=(e)=>{{
@@ -249,7 +259,7 @@ function startRec(){{
     }}
     document.getElementById('box').textContent=final_t+interim;
   }};
-  rec.onerror=(e)=>{{document.getElementById('st').textContent='Error: '+e.error;stopRec();}};
+  rec.onerror=(e)=>{{document.getElementById('st').textContent='Error: '+e.error+'. Try Chrome.';stopRec();}};
   rec.onend=()=>stopRec();
   rec.start();
 }}
@@ -260,14 +270,12 @@ function stopRec(){{
   document.getElementById('wave').style.display='none';
   const text=final_t.trim();
   if(text){{
-    document.getElementById('st').textContent='Done! Paste into Voice transcript field below.';
     document.getElementById('box').textContent=text;
-    // Copy to clipboard automatically
-    navigator.clipboard.writeText(text).then(()=>{{
-      document.getElementById('st').textContent='✓ Copied! Now paste into the Voice transcript field and click Send Voice.';
-    }}).catch(()=>{{
-      document.getElementById('st').textContent='Done! Copy text above and paste into Voice transcript field.';
-    }});
+    document.getElementById('st').textContent='Submitting...';
+    // Navigate parent to inject query param — triggers Streamlit rerun
+    const url=new URL(window.parent.location.href);
+    url.searchParams.set('vt',text);
+    window.parent.location.href=url.toString();
   }} else {{
     document.getElementById('st').textContent='No speech detected. Try again.';
   }}
@@ -275,39 +283,21 @@ function stopRec(){{
 </script>
 """, height=140)
 
-# ── Voice transcript input ────────────────────────────────────────────────────
+# ── Input section ─────────────────────────────────────────────────────────────
 st.divider()
-
-# Show voice transcript field - user can see/edit what was spoken
-voice_col1, voice_col2 = st.columns([5,1])
-with voice_col1:
-    voice_transcript = st.text_input(
-        "Voice transcript:",
-        value=st.session_state.voice_text,
-        placeholder="Spoken text appears here after recording...",
-        key="voice_transcript_field",
-        label_visibility="visible",
-    )
-with voice_col2:
-    send_voice_btn = st.button("Send Voice", type="primary", use_container_width=True)
-
-# Update session state when transcript field changes
-if voice_transcript != st.session_state.voice_text:
-    st.session_state.voice_text = voice_transcript
-
-# Manual text input row
 col_i, col_s = st.columns([5,1])
 with col_i:
     manual_msg = st.text_input(
-        "Or type here:",
-        placeholder="Type any message or question — patient triage, protocol questions, follow-ups...",
+        "Or type any message or question:",
+        placeholder="Patient triage, protocol questions, follow-ups, general CCM questions...",
         label_visibility="collapsed",
         key="manual_msg",
     )
 with col_s:
     send_btn = st.button("Send", type="primary", use_container_width=True)
 
-voice_triggered = None
+send_voice_btn = False
+voice_transcript = st.session_state.voice_text
 
 # Quick examples
 st.markdown("**Quick examples:**")
@@ -355,9 +345,11 @@ for msg in st.session_state.messages:
 
 # ── Process input ─────────────────────────────────────────────────────────────
 user_input = None
-if send_voice_btn and voice_transcript.strip():
-    user_input = voice_transcript.strip()
-    st.session_state.voice_text = ""  # clear after sending
+# Auto-send from voice query param
+if st.session_state.voice_auto_send and st.session_state.voice_text.strip():
+    user_input = st.session_state.voice_text.strip()
+    st.session_state.voice_text = ""
+    st.session_state.voice_auto_send = False
 elif send_btn and manual_msg.strip():
     user_input = manual_msg.strip()
 elif selected:
