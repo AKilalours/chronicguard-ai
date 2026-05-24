@@ -1,0 +1,14 @@
+{
+  "total_corrections": 25,
+  "intent_corrections": 22,
+  "risk_corrections": 25,
+  "safety_corrections": 23,
+  "retraining_rounds": 0,
+  "correction_rate": 0.2,
+  "avg_confidence_at_correction": 0.461,
+  "weighted_correction_count": 71.0,
+  "retrain_threshold": 20,
+  "progress_to_retrain": 1.0,
+  "should_retrain": true,
+  "uncertain_examples": 25
+}

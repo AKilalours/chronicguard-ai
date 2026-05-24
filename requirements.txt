@@ -1,0 +1,8 @@
+scikit-learn
+numpy
+pandas
+joblib
+chromadb
+openai
+streamlit
+reportlab

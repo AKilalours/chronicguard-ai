@@ -1,0 +1,32 @@
+{
+  "n_patients": 200,
+  "response_time": {
+    "manual_median_hours": 20.33,
+    "ai_median_hours": 1.29,
+    "improvement_pct": 93.6,
+    "manual_urgent_median_hours": 4.53,
+    "ai_urgent_median_hours": 0.174,
+    "urgent_improvement_pct": 96.2
+  },
+  "safety": {
+    "manual_missed_urgent": 1,
+    "ai_missed_urgent": 0,
+    "missed_urgent_reduction": 1,
+    "lives_at_risk_prevented": 1
+  },
+  "care_gaps": {
+    "manual_closure_rate": 0.584,
+    "ai_closure_rate": 0.933,
+    "improvement_pct": 59.6,
+    "additional_gaps_closed": 31
+  },
+  "efficiency": {
+    "manual_cm_capacity_per_day": 64,
+    "ai_cm_capacity_per_day": 176,
+    "capacity_increase_pct": 175.0
+  },
+  "financial_proxy": {
+    "estimated_readmissions_prevented": 0,
+    "estimated_cost_savings_usd": 0
+  }
+}

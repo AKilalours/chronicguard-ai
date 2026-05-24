@@ -1,0 +1,170 @@
+{
+  "performance": {
+    "risk_macro_f1": 1.0,
+    "risk_accuracy": 1.0,
+    "intent_macro_f1": 1.0,
+    "intent_accuracy": 1.0
+  },
+  "risk_per_class": {
+    "low": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 60.0
+    },
+    "medium": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 72.0
+    },
+    "high": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 60.0
+    },
+    "urgent": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 48.0
+    }
+  },
+  "intent_per_class": {
+    "appointment_admin": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 24.0
+    },
+    "care_gap": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 36.0
+    },
+    "crisis": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 36.0
+    },
+    "lab_results": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 48.0
+    },
+    "medication_question": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 48.0
+    },
+    "symptom_escalation": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 48.0
+    }
+  },
+  "safety": {
+    "urgent_recall": 1.0,
+    "urgent_precision": 1.0,
+    "high_recall": 1.0,
+    "high_precision": 1.0,
+    "critical_false_negative_rate": 0.0,
+    "safety_constraint_met": true,
+    "safety_constraint": "urgent_recall >= 0.92"
+  },
+  "risk_confusion": [
+    [
+      60,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      72,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      60,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      48
+    ]
+  ],
+  "intent_confusion": [
+    [
+      24,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      36,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      36,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      48,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      48,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      48
+    ]
+  ],
+  "calibration": null,
+  "error_analysis": {
+    "dangerous_misclassifications": [],
+    "common_risk_errors": {},
+    "common_intent_errors": {},
+    "total_risk_errors": 0,
+    "total_intent_errors": 0,
+    "safety_critical_fn_count": 0
+  },
+  "latency": {
+    "p50_ms": 0.0,
+    "p95_ms": 0.0
+  }
+}

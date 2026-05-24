@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.DS_Store
+chroma_db/
+models/clinicalbert/checkpoint-*/
+*.bin
+*.pt
+.env
+venv/
+results/active_learning/

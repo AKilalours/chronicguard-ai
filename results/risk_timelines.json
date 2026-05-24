@@ -1,0 +1,165 @@
+{
+  "n_patients": 3,
+  "proactive_outreach_needed": 2,
+  "timelines": [
+    {
+      "patient_id": "PT_001",
+      "name": "Patient A \u2014 Deteriorating",
+      "condition": "Hypertension + Diabetes",
+      "current_risk": "urgent",
+      "peak_risk": "urgent",
+      "trend": "deteriorating",
+      "trend_slope": 0.305,
+      "proactive_outreach_recommended": true,
+      "n_contacts": 5,
+      "points": [
+        {
+          "days_offset": 0,
+          "message": "I missed my blood pressure medication today",
+          "intent": "medication_question",
+          "risk_level": "low",
+          "risk_score": 1,
+          "requires_review": false
+        },
+        {
+          "days_offset": 2,
+          "message": "My BP has been a bit high this week",
+          "intent": "symptom_escalation",
+          "risk_level": "medium",
+          "risk_score": 2,
+          "requires_review": false
+        },
+        {
+          "days_offset": 5,
+          "message": "Headache and dizziness for two days",
+          "intent": "symptom_escalation",
+          "risk_level": "high",
+          "risk_score": 3,
+          "requires_review": true
+        },
+        {
+          "days_offset": 7,
+          "message": "BP reading 175/105 and I feel terrible",
+          "intent": "symptom_escalation",
+          "risk_level": "high",
+          "risk_score": 3,
+          "requires_review": true
+        },
+        {
+          "days_offset": 9,
+          "message": "Chest tightness and can't catch my breath",
+          "intent": "symptom_escalation",
+          "risk_level": "urgent",
+          "risk_score": 4,
+          "requires_review": true
+        }
+      ]
+    },
+    {
+      "patient_id": "PT_002",
+      "name": "Patient B \u2014 Improving",
+      "condition": "Diabetes",
+      "current_risk": "low",
+      "peak_risk": "urgent",
+      "trend": "improving",
+      "trend_slope": -0.224,
+      "proactive_outreach_recommended": false,
+      "n_contacts": 5,
+      "points": [
+        {
+          "days_offset": 0,
+          "message": "Blood sugar over 300 for three days",
+          "intent": "symptom_escalation",
+          "risk_level": "urgent",
+          "risk_score": 4,
+          "requires_review": true
+        },
+        {
+          "days_offset": 3,
+          "message": "Started new insulin, sugar still high",
+          "intent": "medication_question",
+          "risk_level": "high",
+          "risk_score": 3,
+          "requires_review": true
+        },
+        {
+          "days_offset": 6,
+          "message": "Sugar down to 220, feeling better",
+          "intent": "lab_results",
+          "risk_level": "medium",
+          "risk_score": 2,
+          "requires_review": false
+        },
+        {
+          "days_offset": 10,
+          "message": "A1C came back 7.2, doctor is happy",
+          "intent": "lab_results",
+          "risk_level": "low",
+          "risk_score": 1,
+          "requires_review": false
+        },
+        {
+          "days_offset": 14,
+          "message": "Can I schedule my quarterly check-in?",
+          "intent": "appointment_admin",
+          "risk_level": "low",
+          "risk_score": 1,
+          "requires_review": false
+        }
+      ]
+    },
+    {
+      "patient_id": "PT_003",
+      "name": "Patient C \u2014 Crisis Risk",
+      "condition": "CHF + Depression",
+      "current_risk": "urgent",
+      "peak_risk": "urgent",
+      "trend": "deteriorating",
+      "trend_slope": 0.291,
+      "proactive_outreach_recommended": true,
+      "n_contacts": 5,
+      "points": [
+        {
+          "days_offset": 0,
+          "message": "Can I reschedule my appointment",
+          "intent": "appointment_admin",
+          "risk_level": "low",
+          "risk_score": 1,
+          "requires_review": false
+        },
+        {
+          "days_offset": 4,
+          "message": "Feeling very tired and out of breath",
+          "intent": "symptom_escalation",
+          "risk_level": "medium",
+          "risk_score": 2,
+          "requires_review": false
+        },
+        {
+          "days_offset": 6,
+          "message": "Gained 5 pounds this week, ankles swollen",
+          "intent": "symptom_escalation",
+          "risk_level": "high",
+          "risk_score": 3,
+          "requires_review": true
+        },
+        {
+          "days_offset": 8,
+          "message": "I feel hopeless, nothing is getting better",
+          "intent": "crisis",
+          "risk_level": "high",
+          "risk_score": 3,
+          "requires_review": true
+        },
+        {
+          "days_offset": 10,
+          "message": "I don't want to be here anymore",
+          "intent": "crisis",
+          "risk_level": "urgent",
+          "risk_score": 4,
+          "requires_review": true
+        }
+      ]
+    }
+  ]
+}

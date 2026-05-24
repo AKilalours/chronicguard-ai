@@ -1,0 +1,28 @@
+{
+  "total_messages": 240,
+  "duplicate_messages": 168,
+  "risk_distribution": {
+    "medium": 72,
+    "low": 60,
+    "high": 60,
+    "urgent": 48
+  },
+  "intent_distribution": {
+    "lab_results": 48,
+    "symptom_escalation": 48,
+    "appointment_admin": 24,
+    "crisis": 36,
+    "medication_question": 48,
+    "care_gap": 36
+  },
+  "imbalance_ratio": 1.5,
+  "tfidf_features": 1814,
+  "medical_abbrevs_expanded": 18,
+  "urgency_patterns": 8,
+  "mean_urgency_signals": {
+    "low": 0.0,
+    "medium": 0.0,
+    "high": 0.183,
+    "urgent": 0.208
+  }
+}
