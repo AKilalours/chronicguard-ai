@@ -213,6 +213,49 @@ if send and user_input.strip():
 # Right panel — last triage detail
 if st.session_state.last_triage:
     with st.sidebar:
+        # ── Outcome simulation stats ──────────────────────────────
+        import json
+        from pathlib import Path
+        sim_path = Path("results/outcome_simulation.json")
+        if sim_path.exists():
+            with open(sim_path) as f:
+                sim = json.load(f)
+            st.markdown("### Outcome simulation")
+            st.metric("Urgent response", 
+                      f"{sim['response_time']['ai_urgent_median_hours']*60:.0f} min",
+                      delta=f"vs {sim['response_time']['manual_urgent_median_hours']:.1f}h manual")
+            st.metric("Care gap closure", 
+                      f"{sim['care_gaps']['ai_closure_rate']*100:.0f}%",
+                      delta=f"+{sim['care_gaps']['improvement_pct']:.0f}%")
+            st.metric("CM capacity", 
+                      f"{sim['efficiency']['ai_cm_capacity_per_day']} msg/day",
+                      delta=f"+{sim['efficiency']['capacity_increase_pct']:.0f}%")
+            st.divider()
+
+        # ── Risk timeline alerts ──────────────────────────────────
+        tl_path = Path("results/risk_timelines.json")
+        if tl_path.exists():
+            with open(tl_path) as f:
+                tl = json.load(f)
+            if tl["proactive_outreach_needed"] > 0:
+                st.warning(f"⚠️ {tl['proactive_outreach_needed']} patient(s) need proactive outreach")
+            st.markdown("### Risk timeline")
+            for t in tl["timelines"]:
+                icon = "📈" if t["trend"] == "deteriorating" else "📉" if t["trend"] == "improving" else "➡️"
+                st.markdown(f"{icon} **{t['name'].split('—')[0].strip()}**: {t['current_risk']} ({t['trend']})")
+            st.divider()
+
+        # ── RAGAS stats ───────────────────────────────────────────
+        ragas_path = Path("results/ragas_evaluation.json")
+        if ragas_path.exists():
+            with open(ragas_path) as f:
+                ragas = json.load(f)
+            st.markdown("### RAGAS evaluation")
+            st.metric("Faithfulness", f"{ragas['avg_faithfulness']:.3f}")
+            st.metric("Hallucination rate", f"{ragas['hallucination_rate']:.0%}",
+                      delta="Safe" if ragas["hallucination_rate"] == 0 else "Review")
+            st.divider()
+
         st.markdown("### Last triage result")
         r = st.session_state.last_triage
         risk = r.risk_level
