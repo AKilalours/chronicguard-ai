@@ -1,51 +1,51 @@
 {
   "n_evaluated": 3,
-  "avg_faithfulness": 0.25,
+  "avg_faithfulness": 1.0,
   "avg_answer_relevance": 0.333,
   "avg_context_precision": 0.467,
   "avg_context_recall": 0.418,
-  "avg_overall": 0.344,
-  "hallucination_rate": 1.0,
-  "n_hallucinations": 3,
+  "avg_overall": 0.606,
+  "hallucination_rate": 0.0,
+  "n_hallucinations": 0,
   "method": "heuristic",
   "individual_results": [
     {
       "question": "I forgot my blood pressure medication for two days. What should I do?",
       "answer": "Thank you for letting us know. Please do not double your dose to make up for missed days. A care manager will reach out to you today to discuss next steps and review any barriers to taking your medica...",
       "scores": {
-        "faithfulness": 0.25,
+        "faithfulness": 1.0,
         "answer_relevance": 1.0,
         "context_precision": 0.4,
         "context_recall": 0.3,
-        "overall": 0.512
+        "overall": 0.775
       },
-      "hallucination_detected": true,
+      "hallucination_detected": false,
       "method": "heuristic"
     },
     {
       "question": "I have chest pain and shortness of breath.",
       "answer": "This sounds like it could be a medical emergency. Please call 911 immediately or have someone take you to the nearest emergency room right away. Do not drive yourself. Your care team will be notified ...",
       "scores": {
-        "faithfulness": 0.0,
+        "faithfulness": 1.0,
         "answer_relevance": 0.0,
         "context_precision": 1.0,
         "context_recall": 0.273,
-        "overall": 0.241
+        "overall": 0.591
       },
-      "hallucination_detected": true,
+      "hallucination_detected": false,
       "method": "heuristic"
     },
     {
       "question": "My refill for my blood thinner was denied.",
       "answer": "We understand this is urgent. A care coordinator will contact your insurance today to appeal the prior authorization denial. In the meantime, please do not stop taking your medication without speaking...",
       "scores": {
-        "faithfulness": 0.5,
+        "faithfulness": 1.0,
         "answer_relevance": 0.0,
         "context_precision": 0.0,
         "context_recall": 0.682,
-        "overall": 0.277
+        "overall": 0.452
       },
-      "hallucination_detected": true,
+      "hallucination_detected": false,
       "method": "heuristic"
     }
   ]
