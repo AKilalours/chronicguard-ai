@@ -352,7 +352,8 @@ elif send_btn and manual_msg.strip():
 elif selected:
     user_input = selected
 
-if user_input:
+if user_input and not st.session_state.get("processing", False):
+    st.session_state.processing = True
     st.session_state.messages.append({"role":"user","content":user_input})
     with st.spinner("Analyzing..."):
         try:
@@ -395,6 +396,7 @@ if user_input:
                 "role":"assistant",
                 "content":f"Pipeline error: {str(e)[:100]}"
             })
+    st.session_state.processing = False
     st.rerun()
 
 # ── Suggestions box ───────────────────────────────────────────────────────────
