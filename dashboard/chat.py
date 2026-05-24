@@ -169,20 +169,10 @@ with st.sidebar:
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="hdr">
-  <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
-    <div style="background:white;border-radius:10px;padding:6px 14px;display:inline-flex;align-items:center;gap:8px">
-      <svg width="30" height="24" viewBox="0 0 100 70">
-        <circle cx="50" cy="10" r="8" fill="#6366f1"/>
-        <circle cx="28" cy="18" r="7" fill="#6366f1"/>
-        <circle cx="72" cy="18" r="7" fill="#6366f1"/>
-        <rect x="43" y="19" width="14" height="24" rx="7" fill="#6366f1"/>
-        <rect x="21" y="26" width="13" height="22" rx="6.5" fill="#6366f1"/>
-        <rect x="66" y="26" width="13" height="22" rx="6.5" fill="#6366f1"/>
-        <path d="M5 58 Q50 72 95 58" stroke="#10b981" stroke-width="5" fill="none" stroke-linecap="round"/>
-      </svg>
-      <span style="color:#6366f1;font-size:15px;font-weight:700">Phamily</span>
-    </div>
-    <span style="color:rgba(255,255,255,0.35);font-size:12px">× ChronicGuard AI</span>
+  <div style="margin-bottom:10px">
+    <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);
+      color:#a5b4fc;font-size:11px;font-weight:600;padding:4px 12px;border-radius:6px;
+      letter-spacing:0.8px">BUILT FOR JAAN HEALTH / PHAMILY CCM</span>
   </div>
   <p style="font-size:28px;font-weight:700;color:white;margin:0">💬 Conversational Triage</p>
   <p style="font-size:13px;color:rgba(255,255,255,0.5);margin:5px 0 2px">
@@ -201,9 +191,11 @@ with col_clear:
 
 # ── AUTO-TRIAGE VOICE COMPONENT ───────────────────────────────────────────────
 st.markdown("### 🎤 Voice Input — Auto Triage")
-st.caption("Click Start → speak → click Stop. The message auto-submits for triage immediately.")
+st.caption("Click Start → speak → click Stop. Transcript appears below — then click **Send Voice**.")
 
-# This component calls streamlit's setComponentValue which triggers a rerun with the transcript
+if "voice_text" not in st.session_state:
+    st.session_state.voice_text = ""
+
 auto_voice = components.html(f"""
 <div id="root" style="font-family:Inter,sans-serif;padding:4px 0">
   <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
@@ -268,14 +260,14 @@ function stopRec(){{
   document.getElementById('wave').style.display='none';
   const text=final_t.trim();
   if(text){{
-    document.getElementById('st').textContent='Submitting: '+text.substring(0,40)+'...';
+    document.getElementById('st').textContent='Done! Paste into Voice transcript field below.';
     document.getElementById('box').textContent=text;
-    // Send to Streamlit
-    window.parent.postMessage({{
-      isStreamlitMessage: true,
-      type: 'streamlit:setComponentValue',
-      value: text
-    }}, '*');
+    // Copy to clipboard automatically
+    navigator.clipboard.writeText(text).then(()=>{{
+      document.getElementById('st').textContent='✓ Copied! Now paste into the Voice transcript field and click Send Voice.';
+    }}).catch(()=>{{
+      document.getElementById('st').textContent='Done! Copy text above and paste into Voice transcript field.';
+    }});
   }} else {{
     document.getElementById('st').textContent='No speech detected. Try again.';
   }}
@@ -283,11 +275,27 @@ function stopRec(){{
 </script>
 """, height=140)
 
-# ── Handle voice auto-submit ──────────────────────────────────────────────────
-voice_triggered = auto_voice  # value from component when stopRec fires
-
-# Manual input row
+# ── Voice transcript input ────────────────────────────────────────────────────
 st.divider()
+
+# Show voice transcript field - user can see/edit what was spoken
+voice_col1, voice_col2 = st.columns([5,1])
+with voice_col1:
+    voice_transcript = st.text_input(
+        "Voice transcript:",
+        value=st.session_state.voice_text,
+        placeholder="Spoken text appears here after recording...",
+        key="voice_transcript_field",
+        label_visibility="visible",
+    )
+with voice_col2:
+    send_voice_btn = st.button("Send Voice", type="primary", use_container_width=True)
+
+# Update session state when transcript field changes
+if voice_transcript != st.session_state.voice_text:
+    st.session_state.voice_text = voice_transcript
+
+# Manual text input row
 col_i, col_s = st.columns([5,1])
 with col_i:
     manual_msg = st.text_input(
@@ -298,6 +306,8 @@ with col_i:
     )
 with col_s:
     send_btn = st.button("Send", type="primary", use_container_width=True)
+
+voice_triggered = None
 
 # Quick examples
 st.markdown("**Quick examples:**")
@@ -345,8 +355,9 @@ for msg in st.session_state.messages:
 
 # ── Process input ─────────────────────────────────────────────────────────────
 user_input = None
-if voice_triggered and isinstance(voice_triggered, str) and voice_triggered.strip():
-    user_input = voice_triggered.strip()
+if send_voice_btn and voice_transcript.strip():
+    user_input = voice_transcript.strip()
+    st.session_state.voice_text = ""  # clear after sending
 elif send_btn and manual_msg.strip():
     user_input = manual_msg.strip()
 elif selected:
