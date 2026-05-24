@@ -1,6 +1,6 @@
 """
-ChronicGuard AI — Conversational Chat + Voice
-Simple reliable voice: speak → see transcript → click Send Voice
+ChronicGuard AI — Conversational Chat
+Voice input via browser + auto-triage via Streamlit form submission
 """
 import sys, csv, os, json
 from pathlib import Path
@@ -56,7 +56,7 @@ def build_response(user_input, triage_result, history):
             icon = RISK_ICONS.get(risk,"⚪")
             action = "Immediate escalation required." if risk in ("urgent","high") else "Route within standard SLA."
             return f"{icon} **{intent.replace('_',' ').title()}** — Risk: **{risk.upper()}**. {action}"
-        return "Set OPENAI_API_KEY for full conversational responses."
+        return "Set OPENAI_API_KEY for full responses."
     try:
         from openai import OpenAI
         client = OpenAI(api_key=openai_key)
@@ -64,7 +64,7 @@ def build_response(user_input, triage_result, history):
             "You are ChronicGuard AI, a clinical care management assistant for Phamily/Jaan Health. "
             "Answer questions about patient triage, CCM protocols, care gaps, medication adherence, "
             "clinical workflows, and this AI system. Be concise, warm, accurate, safety-conscious. "
-            "Never diagnose or prescribe. For clinical questions beyond scope, advise consulting a provider."
+            "Never diagnose or prescribe."
         )
         msgs = [{"role":"system","content":system}]
         for h in history[-8:]:
@@ -81,8 +81,19 @@ def build_response(user_input, triage_result, history):
     except Exception as e:
         return f"Error: {str(e)[:60]}"
 
+def speak(text, speed=1.0):
+    clean = text.replace("**","").replace("*","").replace("`","")[:400]
+    components.html(f"""<script>
+(function(){{
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance({json.dumps(clean)});
+  u.rate={speed};u.pitch=1.0;u.lang='en-US';
+  setTimeout(()=>window.speechSynthesis.speak(u),300);
+}})();
+</script>""", height=0)
+
 # ── Session state ─────────────────────────────────────────────────────────────
-for k,v in [("messages",[]),("last_triage",None),("pending_voice","")]:
+for k,v in [("messages",[]),("last_triage",None),("processing",False)]:
     if k not in st.session_state:
         st.session_state[k] = v
 
@@ -93,31 +104,19 @@ with st.sidebar:
     voice_on = st.toggle("🔊 Voice replies", value=True)
     voice_speed = st.slider("Speed", 0.5, 2.0, 1.0, 0.1) if voice_on else 1.0
     if st.button("🔇 Stop speaking", use_container_width=True):
-        components.html("<script>speechSynthesis.cancel();</script>", height=0)
+        components.html("<script>window.speechSynthesis.cancel();</script>", height=0)
     st.divider()
-    for path, label, keys in [
-        ("results/outcome_simulation.json", "Outcome simulation",
-         [("Urgent response","response_time","ai_urgent_median_hours",60,"min",
-           "manual_urgent_median_hours","h manual"),
-          ("Care gap closure","care_gaps","ai_closure_rate",100,"%",
-           "improvement_pct","% gain"),
-          ("CM capacity","efficiency","ai_cm_capacity_per_day",1,"msg/day",
-           "capacity_increase_pct","% gain")]),
-    ]:
-        p = Path(path)
-        if p.exists():
-            with open(p) as f: d = json.load(f)
-            st.markdown(f"**{label}**")
-            st.metric("Urgent response",
-                      f"{d['response_time']['ai_urgent_median_hours']*60:.0f} min",
-                      delta=f"vs {d['response_time']['manual_urgent_median_hours']:.1f}h")
-            st.metric("Care gaps",
-                      f"{d['care_gaps']['ai_closure_rate']*100:.0f}%",
-                      delta=f"+{d['care_gaps']['improvement_pct']:.0f}%")
-            st.metric("CM capacity",
-                      f"{d['efficiency']['ai_cm_capacity_per_day']} msg/day",
-                      delta=f"+{d['efficiency']['capacity_increase_pct']:.0f}%")
-            st.divider()
+    sim_path = Path("results/outcome_simulation.json")
+    if sim_path.exists():
+        with open(sim_path) as f: sim = json.load(f)
+        st.markdown("**Outcome simulation**")
+        st.metric("Urgent response", f"{sim['response_time']['ai_urgent_median_hours']*60:.0f} min",
+                  delta=f"vs {sim['response_time']['manual_urgent_median_hours']:.1f}h")
+        st.metric("Care gaps", f"{sim['care_gaps']['ai_closure_rate']*100:.0f}%",
+                  delta=f"+{sim['care_gaps']['improvement_pct']:.0f}%")
+        st.metric("CM capacity", f"{sim['efficiency']['ai_cm_capacity_per_day']} msg/day",
+                  delta=f"+{sim['efficiency']['capacity_increase_pct']:.0f}%")
+        st.divider()
     if st.session_state.last_triage:
         r = st.session_state.last_triage
         st.markdown("**Last triage**")
@@ -138,7 +137,7 @@ st.markdown("""
   </div>
   <p style="font-size:26px;font-weight:700;color:white;margin:0">💬 Conversational Triage</p>
   <p style="font-size:13px;color:rgba(255,255,255,0.5);margin:4px 0 2px">
-    Voice Input · Auto-Triage · Voice Replies · Safety-First</p>
+    Voice Input · Voice Replies · Safety-First · Real-time Risk Classification</p>
   <p style="font-size:11px;color:rgba(255,255,255,0.3);margin:0">
     Built by Akila Lourdes Miriyala Francis &amp; Akilan Manivannan</p>
 </div>
@@ -151,45 +150,37 @@ with col2:
         st.session_state.last_triage = None
         st.rerun()
 
-# ── VOICE INPUT ───────────────────────────────────────────────────────────────
+# ── VOICE INPUT — using st.form for reliable submission ───────────────────────
 st.markdown("### 🎤 Voice Input")
-st.caption("Click Start → speak → Stop. Transcript appears in the box. Click **Send Voice**.")
 
+# The voice component ONLY shows the transcript visually
+# Streamlit can't be auto-triggered from JS — so we use a form
 components.html("""
-<div style="font-family:Inter,sans-serif">
-  <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px">
+<div style="font-family:Inter,sans-serif;margin-bottom:4px">
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
     <button id="vBtn" onclick="toggleRec()"
       style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;border:none;
-      padding:10px 20px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600">
+      padding:9px 20px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;
+      box-shadow:0 4px 12px rgba(124,58,237,0.4)">
       🎤 Start Recording
     </button>
-    <div id="wave" style="display:none;align-items:center;gap:3px">
+    <div id="wave" style="display:none;align-items:center;gap:2px">
       <div style="width:3px;height:8px;background:#a78bfa;border-radius:2px;animation:wv .5s ease infinite alternate"></div>
       <div style="width:3px;height:16px;background:#a78bfa;border-radius:2px;animation:wv .5s .1s ease infinite alternate"></div>
       <div style="width:3px;height:22px;background:#a78bfa;border-radius:2px;animation:wv .5s .2s ease infinite alternate"></div>
       <div style="width:3px;height:16px;background:#a78bfa;border-radius:2px;animation:wv .5s .3s ease infinite alternate"></div>
       <div style="width:3px;height:8px;background:#a78bfa;border-radius:2px;animation:wv .5s .4s ease infinite alternate"></div>
-      <span style="color:#a78bfa;font-size:12px;margin-left:6px">Listening...</span>
     </div>
-    <span id="st" style="font-size:12px;color:#94a3b8">Use Chrome · click to begin</span>
+    <span id="st" style="font-size:12px;color:#94a3b8">Chrome only · speak and stop</span>
   </div>
   <div id="box" style="background:#1e1b4b;border:1.5px solid #4338ca;border-radius:10px;
-    padding:10px 14px;min-height:44px;font-size:13px;color:#c4b5fd;
-    line-height:1.5;margin-bottom:8px;cursor:text"
-    onclick="selectAll(this)">
-    <span id="placeholder" style="opacity:0.4">Spoken words appear here...</span>
-    <span id="transcript" style="display:none"></span>
+    padding:10px 14px;min-height:42px;font-size:13px;color:#c4b5fd;line-height:1.5">
+    <span id="ph" style="opacity:0.4">Your spoken words appear here...</span>
+    <span id="tr"></span>
   </div>
-  <div style="display:flex;gap:8px">
-    <button onclick="copyToClipboard()"
-      style="background:linear-gradient(135deg,#0f6e56,#1d9e75);color:white;border:none;
-      padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">
-      📋 Copy text
-    </button>
-    <span id="copied" style="font-size:12px;color:#86efac;align-self:center;display:none">
-      ✓ Copied! Now paste into the box below and click Send Voice
-    </span>
-  </div>
+  <p style="font-size:11px;color:#64748b;margin:6px 0 0">
+    After stopping, the transcript auto-fills the input below. Then press Enter or click Send.
+  </p>
 </div>
 <style>@keyframes wv{0%{transform:scaleY(0.3)}100%{transform:scaleY(1.6)}}</style>
 <script>
@@ -205,19 +196,19 @@ function startRec(){
   rec=new SR();rec.continuous=true;rec.interimResults=true;rec.lang='en-US';
   rec.onstart=()=>{
     going=true;final_t='';
-    document.getElementById('vBtn').innerHTML='⏹ Stop';
+    document.getElementById('vBtn').innerHTML='⏹ Stop Recording';
     document.getElementById('vBtn').style.background='linear-gradient(135deg,#dc2626,#b91c1c)';
     document.getElementById('wave').style.display='flex';
-    document.getElementById('placeholder').style.display='none';
-    document.getElementById('transcript').style.display='inline';
-    document.getElementById('transcript').textContent='Listening...';
+    document.getElementById('ph').style.display='none';
+    document.getElementById('tr').textContent='Listening...';
+    document.getElementById('st').textContent='Speaking...';
   };
   rec.onresult=(e)=>{
     let interim='';
     for(let i=e.resultIndex;i<e.results.length;i++){
       e.results[i].isFinal?final_t+=e.results[i][0].transcript+' ':interim+=e.results[i][0].transcript;
     }
-    document.getElementById('transcript').textContent=final_t+interim;
+    document.getElementById('tr').textContent=final_t+interim;
   };
   rec.onerror=(e)=>{document.getElementById('st').textContent='Error: '+e.error;stopRec();};
   rec.onend=stopRec;
@@ -229,45 +220,47 @@ function stopRec(){
   document.getElementById('vBtn').style.background='linear-gradient(135deg,#7c3aed,#5b21b6)';
   document.getElementById('wave').style.display='none';
   const text=final_t.trim();
-  document.getElementById('transcript').textContent=text||'(nothing heard)';
-  document.getElementById('st').textContent=text?'Click "Copy text" then paste below':'Nothing heard';
+  if(text){
+    document.getElementById('tr').textContent=text;
+    document.getElementById('st').textContent='Done! Filling input below...';
+    // Fill ALL text inputs in parent frame
+    try{
+      const allInputs=[...window.parent.document.querySelectorAll('input[type=text],input:not([type])')];
+      const target=allInputs.filter(i=>i.offsetParent!==null).pop();
+      if(target){
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(target,text);
+        target.dispatchEvent(new Event('input',{bubbles:true}));
+        target.focus();
+        document.getElementById('st').textContent='✓ Filled! Press Enter to send';
+      }
+    }catch(e){
+      document.getElementById('st').textContent='Done! Type or paste: '+text.substring(0,30)+'...';
+    }
+  } else {
+    document.getElementById('st').textContent='Nothing heard. Try again.';
+    document.getElementById('ph').style.display='inline';
+    document.getElementById('tr').textContent='';
+  }
 }
-function copyToClipboard(){
-  const text=document.getElementById('transcript').textContent.trim();
-  if(!text||text==='(nothing heard)')return;
-  navigator.clipboard.writeText(text).then(()=>{
-    document.getElementById('copied').style.display='inline';
-    setTimeout(()=>document.getElementById('copied').style.display='none',4000);
-  });
-}
-function selectAll(el){window.getSelection().selectAllChildren(el);}
 </script>
-""", height=175)
+""", height=160)
 
-# ── Input ─────────────────────────────────────────────────────────────────────
+# ── Single input box — works for both voice and text ─────────────────────────
 st.divider()
-vc1, vc2 = st.columns([5,1])
-with vc1:
-    voice_input = st.text_input(
-        "Voice transcript:",
-        placeholder="Paste transcript here (Cmd+V) then click Send Voice →",
-        key="voice_box",
-    )
-with vc2:
-    send_voice = st.button("Send Voice", type="primary", use_container_width=True)
 
-c1, c2 = st.columns([5,1])
-with c1:
-    text_input = st.text_input(
-        "Message:",
-        placeholder="Or type any question — triage, protocols, CCM, system questions...",
-        label_visibility="collapsed",
-        key="text_box",
-    )
-with c2:
-    send_text = st.button("Send", type="primary", use_container_width=True)
+with st.form(key="msg_form", clear_on_submit=True):
+    fc1, fc2 = st.columns([6,1])
+    with fc1:
+        msg_input = st.text_input(
+            "Message",
+            placeholder="Speak above (auto-fills here) or type any question...",
+            label_visibility="collapsed",
+            key="msg_field",
+        )
+    with fc2:
+        submitted = st.form_submit_button("Send ▶", type="primary", use_container_width=True)
 
-# Quick examples
+# Quick examples outside form
 st.markdown("**Quick examples:**")
 ec = st.columns(4)
 examples = [
@@ -301,28 +294,25 @@ for msg in st.session_state.messages:
                 unsafe_allow_html=True,
             )
 
-# What else you can ask
-with st.expander("💡 What else can you ask?"):
+with st.expander("💡 What can you ask?"):
     st.markdown("""
-**Patient triage:** "I have chest pain", "My blood sugar is 320", "I don't want to be here anymore", "I ran out of my blood thinner"
+**Triage:** "chest pain", "blood sugar 320", "don't want to be here", "ran out of blood thinner"
 
-**Follow-ups after triage:** "What should the care manager do first?", "Why was this urgent?", "What protocols apply?"
+**Follow-ups:** "What should care manager do first?", "Why urgent?", "What protocols apply?"
 
-**General CCM:** "What is a care gap?", "What is the 988 crisis line?", "When should I call 911?", "What is prior authorization?"
+**CCM questions:** "What is a care gap?", "What is prior authorization?", "When to call 911?"
 
-**About this system:** "How does HITL work?", "What is urgent recall?", "Explain RAGAS", "How does RAG retrieval work?", "What is LoRA fine-tuning?"
+**System:** "How does HITL work?", "What is urgent recall?", "Explain RAGAS", "What is LoRA?"
     """)
 
 # ── Process ───────────────────────────────────────────────────────────────────
 user_input = None
-if send_voice and voice_input.strip():
-    user_input = voice_input.strip()
-elif send_text and text_input.strip():
-    user_input = text_input.strip()
+if submitted and msg_input.strip():
+    user_input = msg_input.strip()
 elif selected:
     user_input = selected
 
-if user_input and not st.session_state.get("processing"):
+if user_input and not st.session_state.processing:
     st.session_state.processing = True
     st.session_state.messages.append({"role":"user","content":user_input})
     with st.spinner("Analyzing..."):
@@ -339,18 +329,9 @@ if user_input and not st.session_state.get("processing"):
                     "requires_human_review":result.requires_human_review,
                 },
             })
-            # TTS
             if voice_on:
                 prefix = {"urgent":"Alert. Urgent. ","high":"High risk. "}.get(result.risk_level,"")
-                clean = (prefix+response).replace("**","").replace("*","").replace("`","")[:350]
-                components.html(f"""<script>
-(function(){{
-  const u=new SpeechSynthesisUtterance({json.dumps(clean)});
-  u.rate={voice_speed};u.pitch=1.0;u.lang='en-US';
-  speechSynthesis.cancel();
-  setTimeout(()=>speechSynthesis.speak(u),300);
-}})();
-</script>""", height=0)
+                speak(prefix + response, voice_speed)
         except Exception as e:
             st.session_state.messages.append({
                 "role":"assistant","content":f"Error: {str(e)[:80]}"})
