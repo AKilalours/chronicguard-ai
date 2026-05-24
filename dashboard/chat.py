@@ -190,23 +190,13 @@ with col_clear:
         st.rerun()
 
 # ── VOICE INPUT ────────────────────────────────────────────────────────────────
-st.markdown("### 🎤 Voice Input — Auto Triage")
-st.caption("Speak → transcript auto-fills → auto-triages. No copy-paste needed.")
+st.markdown("### 🎤 Voice Input")
+st.caption("Speak → transcript appears → click **Send Voice** (one click).")
 
 if "voice_text" not in st.session_state:
     st.session_state.voice_text = ""
 if "voice_auto_send" not in st.session_state:
     st.session_state.voice_auto_send = False
-
-# Check query params for voice transcript (set by JS)
-qp = st.query_params
-if "vt" in qp and qp["vt"].strip():
-    incoming = qp["vt"].strip()
-    if incoming != st.session_state.get("last_voice_qp", ""):
-        st.session_state.voice_text = incoming
-        st.session_state.voice_auto_send = True
-        st.session_state.last_voice_qp = incoming
-        st.query_params.clear()
 
 components.html(f"""
 <div style="font-family:Inter,sans-serif;padding:2px 0">
@@ -271,11 +261,17 @@ function stopRec(){{
   const text=final_t.trim();
   if(text){{
     document.getElementById('box').textContent=text;
-    document.getElementById('st').textContent='Submitting...';
-    // Navigate parent to inject query param — triggers Streamlit rerun
-    const url=new URL(window.parent.location.href);
-    url.searchParams.set('vt',text);
-    window.parent.location.href=url.toString();
+    document.getElementById('st').textContent='Done! Click Send Voice below.';
+    // Write to the Streamlit text input directly via DOM
+    const inputs=window.parent.document.querySelectorAll('input[type="text"]');
+    for(let inp of inputs){{
+      if(inp.placeholder&&inp.placeholder.includes('Spoken')){{
+        const nativeInputValueSetter=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;
+        nativeInputValueSetter.call(inp,text);
+        inp.dispatchEvent(new Event('input',{{bubbles:true}}));
+        break;
+      }}
+    }}
   }} else {{
     document.getElementById('st').textContent='No speech detected. Try again.';
   }}
@@ -285,19 +281,29 @@ function stopRec(){{
 
 # ── Input section ─────────────────────────────────────────────────────────────
 st.divider()
+
+# Voice transcript row - user sees what was spoken, clicks Send Voice
+vcol1, vcol2 = st.columns([5,1])
+with vcol1:
+    voice_transcript = st.text_input(
+        "Spoken text:",
+        placeholder="Spoken text appears here after recording...",
+        key="voice_input_box",
+    )
+with vcol2:
+    send_voice_btn = st.button("Send Voice", type="primary", use_container_width=True)
+
+# Text input row
 col_i, col_s = st.columns([5,1])
 with col_i:
     manual_msg = st.text_input(
-        "Or type any message or question:",
+        "Type here:",
         placeholder="Patient triage, protocol questions, follow-ups, general CCM questions...",
         label_visibility="collapsed",
         key="manual_msg",
     )
 with col_s:
     send_btn = st.button("Send", type="primary", use_container_width=True)
-
-send_voice_btn = False
-voice_transcript = st.session_state.voice_text
 
 # Quick examples
 st.markdown("**Quick examples:**")
@@ -345,11 +351,8 @@ for msg in st.session_state.messages:
 
 # ── Process input ─────────────────────────────────────────────────────────────
 user_input = None
-# Auto-send from voice query param
-if st.session_state.voice_auto_send and st.session_state.voice_text.strip():
-    user_input = st.session_state.voice_text.strip()
-    st.session_state.voice_text = ""
-    st.session_state.voice_auto_send = False
+if send_voice_btn and voice_transcript.strip():
+    user_input = voice_transcript.strip()
 elif send_btn and manual_msg.strip():
     user_input = manual_msg.strip()
 elif selected:
