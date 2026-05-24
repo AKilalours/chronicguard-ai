@@ -85,7 +85,7 @@ with st.sidebar:
     st.markdown("**Safety constraint**")
     st.markdown("`urgent_recall ≥ 0.92` — hard requirement, not a trade-off.")
     st.divider()
-    page = st.radio("View", ["Live Demo", "Batch Evaluation", "Outcome Simulation", "Risk Timeline", "RAGAS Eval", "System Info"])
+    page = st.radio("View", ["Live Demo", "Batch Evaluation", "Outcome Simulation", "Risk Timeline", "RAGAS Eval", "Active Learning", "System Info"])
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -383,6 +383,72 @@ elif page == "RAGAS Eval":
                 st.markdown(f"**Draft answer:** {result.get('answer', '')}")
 
         st.info(f"Evaluation method: {d.get('method', 'heuristic')} | Model: GPT-4o-mini")
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+elif page == "Active Learning":
+    st.subheader("Active Learning Loop")
+    st.markdown(
+        "Care manager corrections are logged and used to retrain the classifier. "
+        "Safety corrections (risk upgrades/downgrades) are weighted 3x more heavily."
+    )
+
+    import json
+    from pathlib import Path
+
+    al_path = Path("results/active_learning_stats.json")
+    if not al_path.exists():
+        st.warning("Run `python src/active_learning.py` first.")
+    else:
+        with open(al_path) as f:
+            d = json.load(f)
+
+        c1,c2,c3,c4 = st.columns(4)
+        c1.metric("Total corrections", d["total_corrections"])
+        c2.metric("Safety corrections", d["safety_corrections"], help="Risk upgrades/downgrades — weighted 3x")
+        c3.metric("Avg confidence at correction", f"{d['avg_confidence_at_correction']:.3f}", help="Lower = model was uncertain")
+        c4.metric("Should retrain", "Yes" if d["should_retrain"] else "No")
+
+        st.divider()
+        progress = d["progress_to_retrain"]
+        st.markdown(f"**Progress to next retraining round:** {progress*100:.0f}%")
+        st.progress(min(progress, 1.0))
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.metric("Weighted correction count", d["weighted_correction_count"])
+            st.metric("Retrain threshold", d["retrain_threshold"])
+        with c2:
+            st.metric("Uncertain examples", d["uncertain_examples"], help="Confidence < 0.75")
+            st.metric("Retraining rounds", d.get("retraining_rounds", 0))
+
+        st.divider()
+        st.markdown("**How it works:**")
+        steps = [
+            "Care manager reviews a triage result and corrects intent or risk level",
+            "Correction is logged with the original confidence score",
+            "Safety corrections (risk upgrades/downgrades) are weighted 3x",
+            "When weighted count reaches threshold, classifier retrains",
+            "Retraining uses synthetic data + all corrections with safety weighting",
+            "This is the path from synthetic data to real production data",
+        ]
+        for i, step in enumerate(steps, 1):
+            st.markdown(f"{i}. {step}")
+
+        corrections_path = Path("results/active_learning/corrections.jsonl")
+        if corrections_path.exists():
+            with open(corrections_path) as f:
+                corrections = [json.loads(line) for line in f if line.strip()]
+            safety_corrections = [c for c in corrections if c.get("was_safety_correction")]
+            if safety_corrections:
+                st.divider()
+                st.markdown(f"**Safety-critical corrections ({len(safety_corrections)} total):**")
+                for c in safety_corrections[:5]:
+                    st.markdown(
+                        f"- `{c['predicted_risk']}` → `{c['corrected_risk']}` "
+                        f"(confidence was {c['risk_confidence']:.2f}): "
+                        f"_{c['message'][:60]}..._"
+                    )
 
 
 # ════════════════════════════════════════════════════════════════════════════════
