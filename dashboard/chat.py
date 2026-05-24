@@ -281,7 +281,7 @@ function stopRec(){{
   }}
 }}
 </script>
-""", height=140, key="voice_component")
+""", height=140)
 
 # ── Handle voice auto-submit ──────────────────────────────────────────────────
 voice_triggered = auto_voice  # value from component when stopRec fires
