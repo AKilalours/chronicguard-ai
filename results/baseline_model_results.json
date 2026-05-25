@@ -1,0 +1,76 @@
+{
+  "model": "TF-IDF + Logistic Regression (baseline)",
+  "dataset_size": 800,
+  "train_size": 640,
+  "test_size": 160,
+  "metrics": {
+    "risk_macro_f1": 1.0,
+    "intent_macro_f1": 0.9915,
+    "risk_accuracy": 1.0,
+    "intent_accuracy": 0.9938
+  },
+  "safety": {
+    "urgent_recall": 1.0,
+    "critical_fn_rate": 0.0,
+    "safety_constraint_met": true,
+    "constraint": "urgent_recall >= 0.92"
+  },
+  "risk_per_class": {
+    "low": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 40
+    },
+    "medium": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 48
+    },
+    "high": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 40
+    },
+    "urgent": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 32
+    }
+  },
+  "confusion_matrix": [
+    [
+      40,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      48,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      40,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      32
+    ]
+  ],
+  "confusion_matrix_labels": [
+    "low",
+    "medium",
+    "high",
+    "urgent"
+  ]
+}
