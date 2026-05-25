@@ -1,18 +1,25 @@
 {
   "tfidf": {
     "model": "TF-IDF + Logistic Regression",
-    "risk_macro_f1": 0.9599,
-    "intent_macro_f1": 1.0,
-    "risk_accuracy": 0.9583,
-    "intent_accuracy": 1.0,
+    "risk_macro_f1": 1.0,
+    "intent_macro_f1": 0.9915,
+    "risk_accuracy": 1.0,
+    "intent_accuracy": 0.9938,
     "urgent_recall": 1.0,
-    "train_time_s": 0.04,
-    "infer_latency_ms": 0.06,
+    "train_time_s": 0.03,
+    "infer_latency_ms": 0.01,
     "safety_passed": true
   },
   "sbert": {
-    "model": "SBERT (not available)",
-    "note": "sentence-transformers not installed. Run: pip install sentence-transformers"
+    "model": "SentenceTransformer (all-mpnet-base-v2) + LR",
+    "risk_macro_f1": 0.9758,
+    "intent_macro_f1": 1.0,
+    "risk_accuracy": 0.975,
+    "intent_accuracy": 1.0,
+    "urgent_recall": 1.0,
+    "train_time_s": 3.29,
+    "infer_latency_ms": 0.0,
+    "safety_passed": true
   },
   "clinicalbert": {
     "model": "Bio_ClinicalBERT (emilyalsentzer/Bio_ClinicalBERT)",
