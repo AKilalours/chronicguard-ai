@@ -206,7 +206,7 @@ def requires_human_review(risk_level: str, intent: str) -> bool:
     return False
 
 
-def generate_dataset(n_per_cell: int = 12) -> list[dict]:
+def generate_dataset(n_per_cell: int = 40) -> list[dict]:
     rows = []
     msg_id = 1
     for intent, risk_dict in TEMPLATES.items():
@@ -245,7 +245,7 @@ def save_dataset(rows: list[dict], path: Path):
 
 
 if __name__ == "__main__":
-    rows = generate_dataset(n_per_cell=12)
+    rows = generate_dataset(n_per_cell=40)
     save_dataset(rows, Path(__file__).parent / "synthetic_messages.csv")
 
     # Print distribution

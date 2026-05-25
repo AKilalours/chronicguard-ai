@@ -1,0 +1,80 @@
+{
+  "n_test": 160,
+  "n_errors": 0,
+  "n_dangerous": 0,
+  "error_rate": 0.0,
+  "calibration": {
+    "high": {
+      "brier_score": 0.0154,
+      "mean_predicted": [
+        0.041,
+        0.057,
+        0.079,
+        0.277,
+        0.82
+      ],
+      "fraction_positive": [
+        0.0,
+        0.0,
+        0.0,
+        0.273,
+        1.0
+      ],
+      "well_calibrated": true
+    },
+    "low": {
+      "brier_score": 0.0217,
+      "mean_predicted": [
+        0.043,
+        0.066,
+        0.092,
+        0.309,
+        0.802
+      ],
+      "fraction_positive": [
+        0.0,
+        0.0,
+        0.0,
+        0.333,
+        1.0
+      ],
+      "well_calibrated": true
+    },
+    "medium": {
+      "brier_score": 0.0223,
+      "mean_predicted": [
+        0.047,
+        0.079,
+        0.103,
+        0.427,
+        0.822
+      ],
+      "fraction_positive": [
+        0.0,
+        0.0,
+        0.0,
+        0.5,
+        1.0
+      ],
+      "well_calibrated": true
+    },
+    "urgent": {
+      "brier_score": 0.011,
+      "mean_predicted": [
+        0.036,
+        0.043,
+        0.053,
+        0.077,
+        0.817
+      ],
+      "fraction_positive": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "well_calibrated": true
+    }
+  }
+}

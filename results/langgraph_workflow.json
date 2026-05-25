@@ -1,0 +1,72 @@
+{
+  "workflow": "classify \u2192 safety_check \u2192 retrieve \u2192 draft \u2192 hitl_gate",
+  "nodes": 5,
+  "conditional_edges": 1,
+  "has_langgraph": true,
+  "test_results": [
+    {
+      "message": "I have chest pain and shortness of breath",
+      "intent": "symptom_escalation",
+      "risk_level": "high",
+      "safety_flag": false,
+      "requires_human_review": true,
+      "routing": "escalate",
+      "n_protocols": 3,
+      "step_log": [
+        "classify \u2192 intent=symptom_escalation, risk=high, conf=0.68",
+        "safety_check \u2192 flag=False",
+        "retrieve \u2192 3 protocols from ChromaDB",
+        "draft \u2192 'ESCALATE: Contact care manager immediately.'",
+        "hitl_gate \u2192 review=True, routing=escalate"
+      ]
+    },
+    {
+      "message": "I don't want to be here anymore",
+      "intent": "crisis",
+      "risk_level": "urgent",
+      "safety_flag": true,
+      "requires_human_review": true,
+      "routing": "escalate",
+      "n_protocols": 3,
+      "step_log": [
+        "classify \u2192 intent=crisis, risk=urgent, conf=0.59",
+        "safety_check \u2192 flag=True",
+        "retrieve \u2192 3 protocols from ChromaDB",
+        "draft \u2192 'ESCALATE: Contact care manager immediately.'",
+        "hitl_gate \u2192 review=True, routing=escalate"
+      ]
+    },
+    {
+      "message": "Can I reschedule my diabetes appointment?",
+      "intent": "appointment_admin",
+      "risk_level": "low",
+      "safety_flag": false,
+      "requires_human_review": false,
+      "routing": "auto_route",
+      "n_protocols": 3,
+      "step_log": [
+        "classify \u2192 intent=appointment_admin, risk=low, conf=0.63",
+        "safety_check \u2192 flag=False",
+        "retrieve \u2192 3 protocols from ChromaDB",
+        "draft \u2192 'Route to care manager within standard SLA.'",
+        "hitl_gate \u2192 review=False, routing=auto_route"
+      ]
+    },
+    {
+      "message": "My blood sugar has been over 300 for two days",
+      "intent": "symptom_escalation",
+      "risk_level": "high",
+      "safety_flag": false,
+      "requires_human_review": true,
+      "routing": "escalate",
+      "n_protocols": 3,
+      "step_log": [
+        "classify \u2192 intent=symptom_escalation, risk=high, conf=0.71",
+        "safety_check \u2192 flag=False",
+        "retrieve \u2192 3 protocols from ChromaDB",
+        "draft \u2192 'ESCALATE: Contact care manager immediately.'",
+        "hitl_gate \u2192 review=True, routing=escalate"
+      ]
+    }
+  ]
+}

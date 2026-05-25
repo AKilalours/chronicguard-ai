@@ -85,7 +85,7 @@ with st.sidebar:
     st.markdown("**Safety constraint**")
     st.markdown("`urgent_recall ≥ 0.92` — hard requirement, not a trade-off.")
     st.divider()
-    page = st.radio("View", ["Live Demo", "Batch Evaluation", "Outcome Simulation", "Risk Timeline", "RAGAS Eval", "Active Learning", "System Info"])
+    page = st.radio("View", ["Live Demo", "Batch Evaluation", "Outcome Simulation", "Risk Timeline", "RAGAS Eval", "Active Learning", "Calibration", "LangGraph", "System Info"])
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -449,6 +449,98 @@ elif page == "Active Learning":
                         f"(confidence was {c['risk_confidence']:.2f}): "
                         f"_{c['message'][:60]}..._"
                     )
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+elif page == "Calibration":
+    st.subheader("Confidence Calibration Analysis")
+    st.markdown(
+        "A well-calibrated model knows when it is uncertain. "
+        "Brier score measures calibration — lower is better (0.0 = perfect)."
+    )
+    import json
+    from pathlib import Path
+    cal_path = Path("results/calibration_analysis.json")
+    if not cal_path.exists():
+        st.warning("Run `python notebooks/04_calibration_error_analysis.py` first.")
+    else:
+        with open(cal_path) as f:
+            d = json.load(f)
+        c1,c2,c3 = st.columns(3)
+        c1.metric("Test messages", d["n_test"])
+        c2.metric("Classification errors", d["n_errors"])
+        c3.metric("Dangerous misclassifications", d["n_dangerous"],
+                  delta="✓ Zero" if d["n_dangerous"]==0 else "⚠ Review",
+                  delta_color="normal" if d["n_dangerous"]==0 else "inverse")
+        if d["n_dangerous"] == 0:
+            st.success("Zero dangerous misclassifications — no urgent/high message was predicted as low/medium.")
+        st.subheader("Brier scores by risk class")
+        st.caption("Brier score < 0.10 = well calibrated. The model's confidence matches its accuracy.")
+        c1,c2,c3,c4 = st.columns(4)
+        cols = [c1,c2,c3,c4]
+        for i,(cls,res) in enumerate(d["calibration"].items()):
+            cols[i%4].metric(
+                cls.title(),
+                f"{res['brier_score']:.4f}",
+                delta="Well calibrated" if res["well_calibrated"] else "Review",
+                delta_color="normal" if res["well_calibrated"] else "inverse"
+            )
+        st.subheader("Error analysis narrative")
+        narr_path = Path("results/error_analysis_narrative.md")
+        if narr_path.exists():
+            st.markdown(narr_path.read_text())
+        with st.expander("Full calibration JSON"):
+            st.json(d)
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+elif page == "LangGraph":
+    st.subheader("LangGraph Agentic Triage Workflow")
+    st.markdown(
+        "The full triage pipeline implemented as a LangGraph state machine with "
+        "5 nodes and conditional routing based on risk level."
+    )
+    import json
+    from pathlib import Path
+    lg_path = Path("results/langgraph_workflow.json")
+    if not lg_path.exists():
+        st.warning("Run `python notebooks/05_langgraph_workflow.py` first.")
+    else:
+        with open(lg_path) as f:
+            d = json.load(f)
+        c1,c2,c3 = st.columns(3)
+        c1.metric("Workflow nodes", d["nodes"])
+        c2.metric("Conditional edges", d["conditional_edges"])
+        c3.metric("LangGraph available", "Yes" if d["has_langgraph"] else "No (manual trace)")
+        st.divider()
+        st.markdown("**Workflow graph:**")
+        st.code("classify → safety_check → retrieve → draft → hitl_gate → [escalate | auto_route]", language="text")
+        st.markdown("**Node descriptions:**")
+        nodes = {
+            "classify": "TF-IDF + LR classifies intent (6 classes) and risk (4 levels)",
+            "safety_check": "Hard rules: crisis intent → safety flag, urgent → escalate",
+            "retrieve": "ChromaDB semantic search → top 3 care protocols retrieved",
+            "draft": "GPT-4o-mini drafts protocol-grounded care manager response",
+            "hitl_gate": "Confidence < 0.75 or risk high/urgent → mandatory human review",
+        }
+        for node, desc in nodes.items():
+            st.markdown(f"- **{node}** — {desc}")
+        st.divider()
+        st.markdown("**Test results:**")
+        RISK_ICONS = {"urgent":"🔴","high":"🟠","medium":"🔵","low":"🟢"}
+        for r in d["test_results"]:
+            icon = RISK_ICONS.get(r["risk_level"],"⚪")
+            routing_badge = "🚨 Escalate" if r["routing"]=="escalate" else "✅ Auto-route"
+            with st.expander(f"{icon} {r['message'][:60]} — {r['risk_level'].upper()} · {routing_badge}"):
+                st.markdown(f"**Intent:** {r['intent'].replace('_',' ').title()}")
+                st.markdown(f"**Risk:** {r['risk_level']}")
+                st.markdown(f"**Safety flag:** {r['safety_flag']}")
+                st.markdown(f"**Human review:** {r['requires_human_review']}")
+                st.markdown(f"**Routing decision:** {r['routing']}")
+                if "step_log" in r:
+                    st.markdown("**Step log:**")
+                    for step in r["step_log"]:
+                        st.code(step, language="text")
 
 
 # ════════════════════════════════════════════════════════════════════════════════
