@@ -83,14 +83,28 @@ def build_response(user_input, triage_result, history):
 
 def speak(text, speed=1.0):
     clean = text.replace("**","").replace("*","").replace("`","")[:400]
-    components.html(f"""<script>
+    components.html(f"""
+<script>
 (function(){{
-  window.speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance({json.dumps(clean)});
-  u.rate={speed};u.pitch=1.0;u.lang='en-US';
-  setTimeout(()=>window.speechSynthesis.speak(u),300);
+  function doSpeak(){{
+    window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance({json.dumps(clean)});
+    u.rate={speed};u.pitch=1.0;u.lang='en-US';
+    window.speechSynthesis.speak(u);
+  }}
+  if(window.speechSynthesis.getVoices().length>0){{doSpeak();}}
+  else{{window.speechSynthesis.onvoiceschanged=doSpeak;setTimeout(doSpeak,600);}}
 }})();
-</script>""", height=0)
+</script>
+<div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.3);
+  border-radius:8px;padding:4px 12px;display:inline-flex;align-items:center;gap:6px;
+  font-size:11px;color:#a78bfa;font-family:Inter,sans-serif">
+  🔊 Speaking response...
+  <button onclick="window.speechSynthesis.cancel();this.parentElement.style.display='none'"
+    style="background:rgba(220,38,38,0.3);border:none;color:#fca5a5;border-radius:4px;
+    padding:1px 6px;cursor:pointer;font-size:10px">Stop</button>
+</div>
+""", height=40)
 
 # ── Session state ─────────────────────────────────────────────────────────────
 for k,v in [("messages",[]),("last_triage",None),("processing",False)]:
@@ -273,6 +287,9 @@ selected = None
 for i,(col,(emoji,ex)) in enumerate(zip(ec,examples)):
     if col.button(f"{emoji} {ex[:20]}…", key=f"ex{i}"):
         selected = ex
+
+# ── TTS slot — always visible, ensures script executes ───────────────────────
+tts_slot = st.empty()
 
 # ── Chat history ──────────────────────────────────────────────────────────────
 st.divider()
