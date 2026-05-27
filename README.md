@@ -110,16 +110,16 @@ But ChronicGuard AI goes further by:
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│              Patient Message (text input)                 │
+│              Patient Message (text input)                │
 └────────────────────────────┬─────────────────────────────┘
                              │
                              ▼
 ┌──────────────────────────────────────────────────────────┐
-│                  TRIAGE CLASSIFIER                        │
+│                  TRIAGE CLASSIFIER                       │
 │  Tier 1: TF-IDF + Logistic Regression    (3ms)           │
 │  Tier 2: SentenceTransformer + LR        (50ms)          │
 │  Tier 3: Bio_ClinicalBERT + LoRA         (trained)       │
-│                                                           │
+│                                                          │
 │  Intent: 6 classes  (medication, symptom, crisis...)     │
 │  Risk:   4 levels   (low, medium, high, urgent)          │
 │  Safety overrides   (crisis always → HITL)               │
@@ -127,7 +127,7 @@ But ChronicGuard AI goes further by:
                              │
                              ▼
 ┌──────────────────────────────────────────────────────────┐
-│                  RAG RETRIEVER                            │
+│                  RAG RETRIEVER                           │
 │  ChromaDB vector store (10 care protocols)               │
 │  MMR diversity filter  (λ=0.6)                           │
 │  Cross-encoder reranker (ms-marco-MiniLM)                │
@@ -136,19 +136,19 @@ But ChronicGuard AI goes further by:
                              │
                              ▼
 ┌──────────────────────────────────────────────────────────┐
-│                  LLM RESPONSE DRAFTER                     │
+│                  LLM RESPONSE DRAFTER                    │
 │  GPT-4o-mini with JSON-constrained output                │
 │  Grounded to retrieved protocols only                    │
-│  Never diagnoses · Always defers to provider            │
-│  Output: draft, action, escalation, confidence, notes   │
+│  Never diagnoses · Always defers to provider             │
+│  Output: draft, action, escalation, confidence, notes    │
 └────────────────────────────┬─────────────────────────────┘
                              │
                              ▼
 ┌──────────────────────────────────────────────────────────┐
-│                  HITL SAFETY GATE                         │
-│  confidence < 0.75      → Human review                  │
-│  risk = high / urgent   → Human review                  │
-│  intent = crisis        → Always human review           │
+│                  HITL SAFETY GATE                        │
+│  confidence < 0.75      → Human review                   │
+│  risk = high / urgent   → Human review                   │
+│  intent = crisis        → Always human review            │
 │  All outputs = DRAFT    → Never sent autonomously        │
 └──────────────────────────────────────────────────────────┘
 ```
